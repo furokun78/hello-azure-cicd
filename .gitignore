@@ -1,0 +1,5 @@
+# Fichiers générés par les scripts d'infra dans Cloud Shell
+infra/envs.json
+infra/github-vars.json
+infra/.suffix
+local.settings.json

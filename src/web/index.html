@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello Azure CI/CD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <span id="env-badge" class="badge">…</span>
+    <h1>Hello Azure CI/CD</h1>
+    <form id="form">
+      <input id="name" placeholder="Ton prénom" autocomplete="off">
+      <button type="submit">Appeler l'API PowerShell</button>
+    </form>
+    <pre id="result">Clique sur le bouton pour appeler l'API.</pre>
+  </main>
+  <!-- config.js est réécrit par le pipeline pour chaque environnement -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

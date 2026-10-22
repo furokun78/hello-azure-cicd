@@ -1,0 +1,10 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; background: Canvas; color: CanvasText; }
+main { max-width: 640px; margin: 4rem auto; padding: 0 16px; }
+form { display: flex; gap: .5rem; flex-wrap: wrap; }
+input, button { font: inherit; padding: .5rem .75rem; }
+pre { background: color-mix(in srgb, CanvasText 8%, Canvas); padding: 1rem; overflow-x: auto; }
+.badge { font-weight: 700; padding: .2rem .6rem; border-radius: 4px; background: gray; color: white; }
+.badge[data-env="dev"] { background: #2e7d32; }
+.badge[data-env="ppd"] { background: #ef6c00; }
+.badge[data-env="prd"] { background: #c62828; }
