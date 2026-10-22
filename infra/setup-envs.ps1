@@ -10,8 +10,8 @@
 #>
 param(
     [string]$SubscriptionId = "d8d3d385-4302-49f5-9309-5076f79ff46c",
-    [string]$Location       = "francecentral",  # région de la Function App (Flex Consumption)
-    [string]$SwaLocation    = "westeurope",     # Static Web Apps n'existe pas en France Central
+    [string]$Location       = "westeurope",     # région du Resource Group, du stockage et de la Function App
+    [string]$SwaLocation    = "westeurope",     # région de la Static Web App (contenu servi mondialement)
     [string]$Project        = "hello",
     [string[]]$Envs         = @("dev", "ppd", "prd")
 )
