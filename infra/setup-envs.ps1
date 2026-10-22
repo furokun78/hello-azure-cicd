@@ -63,8 +63,9 @@ foreach ($env in $Envs) {
         --sku Free --tags @tags -o none
 
     $swaHost  = az staticwebapp show --name $swa --resource-group $rg --query defaultHostname -o tsv
-    # On lit le nom d'hôte réel : les nouvelles apps peuvent avoir un nom d'hôte avec un hash et la région
-    $funcHost = az functionapp show --name $func --resource-group $rg --query "defaultHostName || hostNames[0]" -o tsv
+    # On lit le nom d'hôte réel via l'API ARM : `az functionapp show` ne le renvoie pas pour Flex (CLI 2.91)
+    $funcHost = az resource show --name $func --resource-group $rg --resource-type Microsoft.Web/sites `
+        --query properties.defaultHostName -o tsv
     if (-not $funcHost) { throw "Impossible de lire le nom d'hôte de $func" }
 
     # Le front (SWA) appelle l'API (Function) sur un autre domaine : il faut autoriser ce domaine (CORS).
