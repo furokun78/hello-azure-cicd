@@ -1,0 +1,69 @@
+# Pipeline principal : on construit UNE fois, puis on promeut le même paquet dev -> ppd -> prd.
+name: CI/CD
+
+on:
+  # Étape 4 : on ajoutera ici le déclenchement automatique à chaque push sur main.
+  # En attendant que l'OIDC soit configuré, le pipeline ne se lance qu'à la main (onglet Actions).
+  workflow_dispatch:
+
+# Un seul déploiement à la fois ; un nouveau run attend la fin du précédent au lieu de l'annuler.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Analyse statique du PowerShell (PSScriptAnalyzer)
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          Invoke-ScriptAnalyzer -Path src/api -Recurse -Severity Error -EnableExit
+
+      - name: Construction du paquet
+        run: |
+          mkdir -p package
+          (cd src/api && zip -r ../../package/api.zip .)
+          cp -r src/web package/web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: package
+
+  deploy-dev:
+    name: Deploy dev
+    needs: build
+    permissions:
+      id-token: write   # nécessaire pour obtenir le jeton OIDC
+      contents: read
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: dev
+
+  deploy-ppd:
+    name: Deploy ppd
+    needs: deploy-dev
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: ppd
+
+  deploy-prd:
+    name: Deploy prd
+    needs: deploy-ppd
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: prd

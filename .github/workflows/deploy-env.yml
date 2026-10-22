@@ -1,0 +1,59 @@
+# Workflow réutilisable : déploie le paquet construit par ci-cd.yml dans UN environnement.
+# Les valeurs propres à chaque environnement viennent des variables du GitHub Environment.
+name: Deploy environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.front.outputs.url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: package
+
+      - name: Connexion à Azure (OIDC, sans secret)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Déploiement de l'API
+        run: |
+          az functionapp deployment source config-zip \
+            -g "${{ vars.RESOURCE_GROUP }}" -n "${{ vars.FUNCTION_APP }}" --src package/api.zip
+
+      - name: Configuration du front pour l'environnement
+        run: |
+          echo "window.APP_CONFIG = { env: '${{ inputs.environment }}', apiUrl: '${{ vars.API_URL }}' };" \
+            > package/web/config.js
+
+      - name: Déploiement du front
+        id: front
+        run: |
+          token=$(az staticwebapp secrets list -n "${{ vars.STATIC_WEB_APP }}" -g "${{ vars.RESOURCE_GROUP }}" \
+            --query properties.apiKey -o tsv)
+          echo "::add-mask::$token"
+          npx --yes @azure/static-web-apps-cli deploy package/web --deployment-token "$token" --env production
+          host=$(az staticwebapp show -n "${{ vars.STATIC_WEB_APP }}" -g "${{ vars.RESOURCE_GROUP }}" \
+            --query defaultHostname -o tsv)
+          echo "url=https://$host" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test (l'API répond avec le bon environnement)
+        run: |
+          for i in $(seq 1 10); do
+            env=$(curl -fsS "${{ vars.API_URL }}/api/hello" | jq -r .environment) && \
+              [ "$env" = "${{ inputs.environment }}" ] && echo "OK : API en '$env'" && exit 0
+            echo "Tentative $i : pas encore prête, nouvel essai dans 15 s"; sleep 15
+          done
+          echo "L'API ne répond pas avec environment=${{ inputs.environment }}"; exit 1
