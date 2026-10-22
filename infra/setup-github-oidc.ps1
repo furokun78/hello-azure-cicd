@@ -22,6 +22,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Sans cette ligne, un échec de `az` (commande externe) n'arrête PAS le script
+$PSNativeCommandUseErrorActionPreference = $true
 az account set --subscription $SubscriptionId
 $tenantId = az account show --query tenantId -o tsv
 

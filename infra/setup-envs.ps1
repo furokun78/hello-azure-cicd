@@ -17,6 +17,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Sans cette ligne, un échec de `az` (commande externe) n'arrête PAS le script
+$PSNativeCommandUseErrorActionPreference = $true
 
 # Suffixe aléatoire pour rendre les noms uniques au niveau mondial.
 # On le mémorise dans un fichier pour que les relances réutilisent les mêmes noms.
