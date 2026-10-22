@@ -62,7 +62,8 @@ foreach ($env in $Envs) {
 
     $swaHost  = az staticwebapp show --name $swa --resource-group $rg --query defaultHostname -o tsv
     # On lit le nom d'hôte réel : les nouvelles apps peuvent avoir un nom d'hôte avec un hash et la région
-    $funcHost = az functionapp show --name $func --resource-group $rg --query defaultHostName -o tsv
+    $funcHost = az functionapp show --name $func --resource-group $rg --query "defaultHostName || hostNames[0]" -o tsv
+    if (-not $funcHost) { throw "Impossible de lire le nom d'hôte de $func" }
 
     # Le front (SWA) appelle l'API (Function) sur un autre domaine : il faut autoriser ce domaine (CORS).
     Write-Host "CORS : autorise https://$swaHost"
