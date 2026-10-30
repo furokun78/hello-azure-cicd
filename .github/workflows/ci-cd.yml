@@ -2,8 +2,13 @@
 name: CI/CD
 
 on:
-  # Étape 4 : on ajoutera ici le déclenchement automatique à chaque push sur main.
-  # En attendant que l'OIDC soit configuré, le pipeline ne se lance qu'à la main (onglet Actions).
+  # Déploiement automatique à chaque push sur main, uniquement si le code ou le pipeline change
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".github/workflows/**"
+  # Lancement manuel toujours possible (onglet Actions > Run workflow)
   workflow_dispatch:
 
 # Un seul déploiement à la fois ; un nouveau run attend la fin du précédent au lieu de l'annuler.
