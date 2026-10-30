@@ -27,14 +27,16 @@ $PSNativeCommandUseErrorActionPreference = $true
 az account set --subscription $SubscriptionId
 $tenantId = az account show --query tenantId -o tsv
 
-$envsFile = Join-Path $PSScriptRoot "envs.json"
-if (-not (Test-Path $envsFile)) { throw "envs.json introuvable : lance d'abord setup-envs.ps1" }
-$envs = Get-Content $envsFile | ConvertFrom-Json
-
 $summary = @()
 foreach ($env in $Envs) {
     $appName = "gh-$Project-$env"
-    $rg      = $envs.$env.resourceGroup
+    $rg      = "rg-$Project-$env"
+
+    # On lit les noms directement dans Azure : aucun fichier local n'est nécessaire
+    $func     = az resource list -g $rg --resource-type Microsoft.Web/sites --query "[0].name" -o tsv
+    $swa      = az resource list -g $rg --resource-type Microsoft.Web/staticSites --query "[0].name" -o tsv
+    if (-not $func -or -not $swa) { throw "Function App ou Static Web App introuvable dans $rg : lance d'abord setup-envs.ps1" }
+    $funcHost = az resource show -g $rg -n $func --resource-type Microsoft.Web/sites --query properties.defaultHostName -o tsv
     Write-Host "`n=== $env : $appName -> $rg ===" -ForegroundColor Yellow
 
     # 1. App Registration + Service Principal (réutilise l'existante si le script est relancé)
@@ -74,9 +76,9 @@ foreach ($env in $Envs) {
         Environment     = $env
         AZURE_CLIENT_ID = $appId
         RESOURCE_GROUP  = $rg
-        FUNCTION_APP    = $envs.$env.functionApp
-        STATIC_WEB_APP  = $envs.$env.staticWebApp
-        API_URL         = $envs.$env.functionUrl
+        FUNCTION_APP    = $func
+        STATIC_WEB_APP  = $swa
+        API_URL         = "https://$funcHost"
     }
 }
 
