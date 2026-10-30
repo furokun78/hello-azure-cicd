@@ -6,7 +6,8 @@ param($Request, $TriggerMetadata)
 $name = $Request.Query.name
 if (-not $name) { $name = "World" }
 
-$body = @{
+# [ordered] garantit l'ordre des clés dans le JSON (une table @{} simple ne le garantit pas)
+$body = [ordered]@{
     message     = "Hello $name !"
     environment = $env:APP_ENV          # défini par setup-envs.ps1 : dev, ppd ou prd
     psVersion   = $PSVersionTable.PSVersion.ToString()
