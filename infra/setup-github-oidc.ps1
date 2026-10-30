@@ -12,10 +12,16 @@
   Résultat : un job GitHub qui tourne dans l'environnement "dev" ne peut pas toucher à la prod.
 
 .EXAMPLE
-  ./setup-github-oidc.ps1 -GitHubRepo "monCompte/hello-azure-cicd"
+  ./setup-github-oidc.ps1 -GitHubRepo "furokun78@9333766/hello-azure-cicd@1429868264"
+
+.NOTES
+  GitHub peut présenter le repo sous deux formes dans le jeton OIDC :
+    - classique  : owner/repo
+    - immuable   : owner@ownerId/repo@repoId  (c'est le cas de ce repo)
+  En cas d'erreur AADSTS700213, reprendre exactement la forme affichée dans le message d'erreur.
 #>
 param(
-    [Parameter(Mandatory)] [string]$GitHubRepo,   # format owner/repo
+    [Parameter(Mandatory)] [string]$GitHubRepo,   # tel qu'il apparaît dans le "subject" du jeton GitHub
     [string]$SubscriptionId = "d8d3d385-4302-49f5-9309-5076f79ff46c",
     [string]$Project        = "hello",
     [string[]]$Envs         = @("dev", "ppd", "prd")
@@ -52,18 +58,24 @@ foreach ($env in $Envs) {
 
     # 2. Federated credential : confiance limitée à ce repo + ce GitHub Environment
     $credName = "github-$env"
-    $existing = az ad app federated-credential list --id $appId --query "[?name=='$credName'].name" -o tsv
-    if (-not $existing) {
+    $subject  = "repo:${GitHubRepo}:environment:$env"
+    $existing = az ad app federated-credential list --id $appId --query "[?name=='$credName'].subject" -o tsv
+    if ($existing -ne $subject) {
         $tmp = New-TemporaryFile
         @{
             name      = $credName
             issuer    = "https://token.actions.githubusercontent.com"
-            subject   = "repo:${GitHubRepo}:environment:$env"
+            subject   = $subject
             audiences = @("api://AzureADTokenExchange")
         } | ConvertTo-Json | Set-Content $tmp
-        az ad app federated-credential create --id $appId --parameters "@$tmp" -o none
+        if ($existing) {
+            # Le sujet a changé (ex : format immuable) : on met à jour la credential existante
+            az ad app federated-credential update --id $appId --federated-credential-id $credName --parameters "@$tmp" -o none
+        } else {
+            az ad app federated-credential create --id $appId --parameters "@$tmp" -o none
+        }
         Remove-Item $tmp
-        Write-Host "Federated credential : repo:${GitHubRepo}:environment:$env"
+        Write-Host "Federated credential : $subject"
     }
 
     # 3. Droits limités au Resource Group de l'environnement
